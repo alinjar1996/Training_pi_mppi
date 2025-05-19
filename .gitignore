@@ -1,2 +1,2 @@
-.*npz
-,*pth
+*.npz
+*.pth
