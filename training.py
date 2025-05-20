@@ -50,32 +50,29 @@ state_terms = data['state_terms']
 xi_samples = xi_samples[:, -1]
 xi_filtered = xi_filtered[:, -1]
 
+xi_filtered = xi_filtered.reshape(-1, xi_filtered.shape[2]) 
+xi_samples = xi_samples.reshape(-1, xi_samples.shape[2])
+state_terms = state_terms.reshape(-1, state_terms.shape[2])
+
+datasize = state_terms.shape[0]
+
 print("xi_filtered", xi_filtered.shape)
 print("xi_samples", xi_samples.shape)
 print("state_terms", state_terms.shape)
 
 #Cell 4
 
-#data = np.load("dataset")
-
-#init_state = data['init_state_data']
-
 init_state =state_terms
 
 c_samples_input = xi_samples
 
-#Only first time-step
-init_state_ = init_state[0]
-c_samples_input_ = c_samples_input[0]
-inp = np.hstack((init_state_, c_samples_input_))
+inp = np.hstack((init_state, c_samples_input))
 
-# #Full Time interval
-# inp = np.concatenate((init_state, c_samples_input), axis=2)
 
 inp_mean, inp_std = inp.mean(), inp.std()
 
 
-print("c_samples_input", c_samples_input.shape)
+#print("c_samples_input", c_samples_input.shape)
 
 #Cell 5
 
@@ -106,43 +103,16 @@ class TrajDataset(Dataset):
 				 
 		return torch.tensor(inp).float(), torch.tensor(init_state).float(), torch.tensor(c_samples_input).float() 
 
-# Batch Size For Training - 3k or 4k 
-batch_size = 100 
+#Cell 6
+batch_size = 10000 
 
 # Using PyTorch Dataloader
-train_dataset = TrajDataset(inp, init_state_, c_samples_input_)
-
-# sample = train_dataset[0]
-
-# print("Number of elements in sample:", len(sample))
-
-# inp_tensor, init_state_tensor, c_samples_input_tensor = sample
-
-# print("inp shape:", inp_tensor.shape)
-# print("init_state shape:", init_state_tensor.shape)
-# print("c_samples_input shape:", c_samples_input_tensor.shape)
-
-# print(type(train_dataset))                    # Should be your custom class
-# print(type(train_dataset[0]))                 # Should be tuple
-# print(type(train_dataset[0][0]))              # Should be torch.Tensor
+train_dataset = TrajDataset(inp, init_state, c_samples_input)
 
 #print(train_dataset[0])
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=True)
 
-# batch = next(iter(train_loader))
 
-# inp_batch, init_state_batch, c_samples_batch = batch
-
-# print("inp_batch shape:", inp_batch.shape)
-# print("init_state_batch shape:", init_state_batch.shape)
-# print("c_samples_batch shape:", c_samples_batch.shape)
-
-# print("inp_batch type:", type(inp_batch))
-# print("init_state_batch type:", type(init_state_batch))
-# print("c_samples_batch type:", type(c_samples_batch))
-
-    
-    
 #Cell 7
 
 # Differentiable Layer
@@ -150,16 +120,7 @@ num_batch = train_loader.batch_size
 
 P = P.to(device) 
 Pdot = Pdot.to(device)
-# P_diag = P_diag.to(device)
-# Pdot_diag = Pdot_diag.to(device)
-
-# Pddot_diag = Pddot_diag.to(device)
-
-
-
-# num_dot = num 
-# num_ddot = num_dot 
-# num_constraint = 2*num+2*num_dot+2*num_ddot
+Pddot = Pddot.to(device)
 
 # CVAE input
 enc_inp_dim = np.shape(inp)[1] 
@@ -183,7 +144,9 @@ print(type(model))
 
 #Cell 8
 
-epochs = 50
+epochs = int(datasize/num_batch)
+print("epochs", epochs)
+#Cell 9
 step, beta = 0, 1.0 # 3.5
 optimizer = optim.AdamW(model.parameters(), lr = 2e-4, weight_decay=6e-5)
 # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = 30, gamma = 0.1)
@@ -202,11 +165,8 @@ for epoch in range(epochs):
         init_state = init_state.to(device)
         c_samples_input = c_samples_input.to(device)
 
-        # print("inp shape:", inp.shape)
-        # print("init_state shape:", init_state.shape)
-        # print("c_samples_input shape:", c_samples_input.shape)
 
-        
+
         
         c_samples, accumulated_res_fixed_point, accumulated_res_primal, accumulated_res_primal_temp, accumulated_res_fixed_point_temp = model(inp, init_state, c_samples_input)
         primal_loss, fixed_point_loss, loss = model.mlp_loss(accumulated_res_primal, accumulated_res_fixed_point, c_samples, c_samples_input)
@@ -229,7 +189,7 @@ for epoch in range(epochs):
     
     os.makedirs("./training_scripts/weights", exist_ok=True)
     if loss <= last_loss:
-            torch.save(model.state_dict(), f"./training_scripts/weights/mlp_learned_proj_manipulator.pth")
+            torch.save(model.state_dict(), f"./weights/mlp_learned_proj_manipulator.pth")
             last_loss = loss
     avg_train_loss.append(np.average(losses_train)), avg_primal_loss.append(np.average(primal_losses)), \
     avg_fixed_point_loss.append(np.average(fixed_point_losses))
