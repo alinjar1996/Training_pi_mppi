@@ -17,7 +17,7 @@ import scipy.io as sio
 # import pol_matrix_comp
 from tqdm import trange,tqdm
 
-from mlp_manipulator import MLP, mlp_projection_filter
+from mlp_manipulator import MLP, MLPProjectionFilter
 
 import os
 
@@ -174,7 +174,7 @@ mlp =  MLP(mlp_inp_dim, hidden_dim, mlp_out_dim)
 #print(mlp)
 print("P", P.size())
 
-model = mlp_projection_filter(P, Pdot, Pddot, mlp, num_batch, inp_mean, inp_std, t_fin).to(device)
+model = MLPProjectionFilter(P, Pdot, Pddot, mlp, num_batch, inp_mean, inp_std, t_fin).to(device)
 
 print(type(model))
 

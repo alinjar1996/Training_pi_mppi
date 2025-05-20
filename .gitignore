@@ -1,2 +1,11 @@
 *.npz
 *.pth
+__pycache__/
+*.pyc
+*.cpython-312.pyc
+
+.DS_Store
+.ipynb_checkpoints
+.vscode
+.idea
+
