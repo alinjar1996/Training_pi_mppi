@@ -144,7 +144,7 @@ class MLPProjectionFilter(nn.Module):
 
     def compute_feasible_control(self, lamda_v, lamda_a, lamda_p, s_v, s_a, s_p, b_eq_term, xi_samples):
         """Compute feasible control via optimization"""
-        device = lamda_v.device
+        
         
         # Build inequality bounds
         v_max_temp = torch.hstack((
